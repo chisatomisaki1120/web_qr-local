@@ -104,7 +104,11 @@ export default function Home() {
         setQrUrl(url)
 
         // Simulate brief loading for UX
-        setTimeout(() => setLoading(false), 500)
+        setTimeout(() => {
+            setLoading(false)
+            // Start polling automatically after QR generation
+            startPolling(des)
+        }, 500)
     }, [selectedAccount, amount])
 
     const handleSubmit = (e) => {
@@ -160,7 +164,7 @@ export default function Home() {
 
     const canGenerate = !!selectedAccount
 
-    const handleConfirmTransfer = () => {
+    const startPolling = useCallback((code) => {
         setPendingConfirm(true)
         setConfirmedTx(null)
         setTxExpired(false)
@@ -196,7 +200,7 @@ export default function Home() {
         }, TIMEOUT_MS)
 
         // Start polling for transaction confirmation
-        const params = new URLSearchParams({ code: qrDescription })
+        const params = new URLSearchParams({ code })
         if (selectedAccount) params.set('accountNumber', selectedAccount.account_number)
         if (amount) params.set('amount', amount)
 
@@ -223,7 +227,7 @@ export default function Home() {
                 console.error('Poll error:', err)
             }
         }, 3000)
-    }
+    }, [selectedAccount, amount])
 
     const formatCountdown = (seconds) => {
         const m = Math.floor(seconds / 60)
@@ -480,38 +484,6 @@ export default function Home() {
                     </div>
                 )}
 
-                {/* Pending Confirmation */}
-                {pendingConfirm && !confirmedTx && (
-                    <div className="confirm-pending">
-                        <div className="card">
-                            <div className="confirm-pending__content">
-                                <div className="confirm-pending__spinner">
-                                    <div className="pulse-ring"></div>
-                                    <div className="pulse-ring pulse-ring--delay"></div>
-                                    <svg className="confirm-pending__icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <polyline points="12 6 12 12 16 14" />
-                                    </svg>
-                                </div>
-                                <h2 className="confirm-pending__title">Đang chờ xác nhận giao dịch</h2>
-                                <p className="confirm-pending__desc">Vui lòng hoàn tất chuyển khoản theo thông tin bên trên. Hệ thống sẽ tự động xác nhận khi nhận được tiền.</p>
-                                {countdown > 0 && (
-                                    <div className="confirm-pending__countdown">
-                                        Thời gian còn lại: <strong>{formatCountdown(countdown)}</strong>
-                                    </div>
-                                )}
-                                <div className="confirm-pending__info">
-                                    <span>Mã nội dung: <strong>{qrDescription}</strong></span>
-                                    {amount && <span>Số tiền: <strong>{displayAmount(amount)}</strong></span>}
-                                </div>
-                                <button type="button" className="btn btn-secondary" onClick={resetForm} style={{ marginTop: '1rem' }}>
-                                    Hủy giao dịch
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {/* Expired Transaction */}
                 {txExpired && !confirmedTx && (
                     <div className="confirm-result">
@@ -538,7 +510,7 @@ export default function Home() {
                 )}
 
                 {/* QR Result */}
-                {qrUrl && !loading && !pendingConfirm && !confirmedTx && !txExpired && (
+                {qrUrl && !loading && !confirmedTx && !txExpired && (
                     <div className="qr-result">
                         <div className="card">
                             <div className="card__title">
@@ -584,14 +556,27 @@ export default function Home() {
                                     )}
                                 </div>
 
+                                {/* Waiting indicator */}
+                                {pendingConfirm && (
+                                    <div className="qr-waiting">
+                                        <div className="qr-waiting__spinner">
+                                            <div className="pulse-ring"></div>
+                                            <div className="pulse-ring pulse-ring--delay"></div>
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="12" cy="12" r="10" />
+                                                <polyline points="12 6 12 12 16 14" />
+                                            </svg>
+                                        </div>
+                                        <div className="qr-waiting__text">
+                                            <span>Đang chờ xác nhận giao dịch...</span>
+                                            {countdown > 0 && (
+                                                <span className="qr-waiting__countdown">Còn lại: <strong>{formatCountdown(countdown)}</strong></span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <div className="qr-result__actions">
-                                    <button type="button" className="btn btn-primary" onClick={handleConfirmTransfer} style={{ marginBottom: '0.5rem' }}>
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                                            <polyline points="22 4 12 14.01 9 11.01" />
-                                        </svg>
-                                        Xác nhận đã chuyển khoản
-                                    </button>
                                     <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
                                     <button type="button" className="btn btn-secondary" onClick={downloadQR}>
                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

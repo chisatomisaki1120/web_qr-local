@@ -442,6 +442,53 @@ html, body {
     word-break: break-all;
 }
 
+/* QR Waiting Indicator */
+.qr-waiting {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 12px;
+    border: 1px solid #f59e0b;
+}
+
+.qr-waiting__spinner {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.qr-waiting__spinner .pulse-ring {
+    width: 40px;
+    height: 40px;
+}
+
+.qr-waiting__spinner svg {
+    color: #f59e0b;
+}
+
+.qr-waiting__text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.875rem;
+    color: #92400e;
+}
+
+.qr-waiting__countdown {
+    font-size: 0.8rem;
+}
+
+.qr-waiting__countdown strong {
+    color: #dc2626;
+}
+
 .qr-result__actions {
     display: flex;
     gap: 0.75rem;

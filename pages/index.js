@@ -3,9 +3,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 export default function Home() {
     const [bankAccounts, setBankAccounts] = useState([])
-    const [selectedAccount, setSelectedAccount] = useState(null)
-    const [accountSearch, setAccountSearch] = useState('')
-    const [showAccountDropdown, setShowAccountDropdown] = useState(false)
+    const [selectedBank, setSelectedBank] = useState(null) // Only store bank name
+    const [selectedAccount, setSelectedAccount] = useState(null) // Randomly selected account for QR
+    const [bankSearch, setBankSearch] = useState('')
+    const [showBankDropdown, setShowBankDropdown] = useState(false)
     const [amount, setAmount] = useState('')
     const [qrUrl, setQrUrl] = useState('')
     const [qrDescription, setQrDescription] = useState('')
@@ -45,23 +46,42 @@ export default function Home() {
     useEffect(() => {
         const handler = (e) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-                setShowAccountDropdown(false)
+                setShowBankDropdown(false)
             }
         }
         document.addEventListener('mousedown', handler)
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
-    const filteredAccounts = bankAccounts.filter(acc => {
-        const q = accountSearch.toLowerCase()
+    // Get unique banks from accounts
+    const uniqueBanks = bankAccounts.reduce((acc, bank) => {
+        if (!acc.find(b => b.bank_short_name === bank.bank_short_name)) {
+            acc.push({
+                bank_short_name: bank.bank_short_name,
+                bank_full_name: bank.bank_full_name,
+                bank_code: bank.bank_code,
+            })
+        }
+        return acc
+    }, [])
+
+    const filteredBanks = uniqueBanks.filter(bank => {
+        const q = bankSearch.toLowerCase()
         return (
-            acc.bank_short_name.toLowerCase().includes(q) ||
-            acc.bank_full_name.toLowerCase().includes(q) ||
-            acc.account_number.toLowerCase().includes(q) ||
-            acc.account_holder_name.toLowerCase().includes(q) ||
-            (acc.label && acc.label.toLowerCase().includes(q))
+            bank.bank_short_name.toLowerCase().includes(q) ||
+            bank.bank_full_name.toLowerCase().includes(q)
         )
     })
+
+    // Get random account from selected bank
+    const getRandomAccountForBank = (bankName) => {
+        const accountsForBank = bankAccounts.filter(
+            acc => acc.bank_short_name === bankName && acc.active === '1'
+        )
+        if (accountsForBank.length === 0) return null
+        const randomIndex = Math.floor(Math.random() * accountsForBank.length)
+        return accountsForBank[randomIndex]
+    }
 
     const formatAmount = (value) => {
         const num = value.replace(/\D/g, '')
@@ -88,14 +108,22 @@ export default function Home() {
     }
 
     const generateQR = useCallback(() => {
-        if (!selectedAccount) return
+        if (!selectedBank) return
+
+        // Randomly select account from the selected bank
+        const account = getRandomAccountForBank(selectedBank.bank_short_name)
+        if (!account) {
+            setApiError('Không tìm thấy tài khoản hoạt động cho ngân hàng này')
+            return
+        }
+        setSelectedAccount(account)
 
         setLoading(true)
         const des = generateRandomCode()
         setQrDescription(des)
         const params = new URLSearchParams({
-            acc: selectedAccount.account_number,
-            bank: selectedAccount.bank_short_name,
+            acc: account.account_number,
+            bank: account.bank_short_name,
         })
         if (amount) params.set('amount', amount)
         params.set('des', des)
@@ -107,9 +135,9 @@ export default function Home() {
         setTimeout(() => {
             setLoading(false)
             // Start polling automatically after QR generation
-            startPolling(des)
+            startPolling(des, account)
         }, 500)
-    }, [selectedAccount, amount])
+    }, [selectedBank, amount, bankAccounts])
 
     const handleSubmit = (e) => {
         e.preventDefault()
@@ -139,8 +167,9 @@ export default function Home() {
     }
 
     const resetForm = () => {
+        setSelectedBank(null)
         setSelectedAccount(null)
-        setAccountSearch('')
+        setBankSearch('')
         setAmount('')
         setQrDescription('')
         setQrUrl('')
@@ -162,9 +191,9 @@ export default function Home() {
         }
     }
 
-    const canGenerate = !!selectedAccount
+    const canGenerate = !!selectedBank
 
-    const startPolling = useCallback((code) => {
+    const startPolling = useCallback((code, account) => {
         setPendingConfirm(true)
         setConfirmedTx(null)
         setTxExpired(false)
@@ -201,7 +230,7 @@ export default function Home() {
 
         // Start polling for transaction confirmation
         const params = new URLSearchParams({ code })
-        if (selectedAccount) params.set('accountNumber', selectedAccount.account_number)
+        if (account) params.set('accountNumber', account.account_number)
         if (amount) params.set('amount', amount)
 
         pollingRef.current = setInterval(async () => {
@@ -227,7 +256,7 @@ export default function Home() {
                 console.error('Poll error:', err)
             }
         }, 3000)
-    }, [selectedAccount, amount])
+    }, [amount])
 
     const formatCountdown = (seconds) => {
         const m = Math.floor(seconds / 60)
@@ -303,25 +332,26 @@ export default function Home() {
                                 </div>
                             ) : (
                                 <div ref={dropdownRef} className="bank-search-wrapper">
-                                    {selectedAccount ? (
+                                    {selectedBank ? (
                                         <div
                                             className="bank-selected"
                                             onClick={() => {
+                                                setSelectedBank(null)
                                                 setSelectedAccount(null)
-                                                setAccountSearch('')
-                                                setShowAccountDropdown(true)
+                                                setBankSearch('')
+                                                setShowBankDropdown(true)
                                                 setTimeout(() => searchInputRef.current?.focus(), 50)
                                             }}
                                         >
                                             <img
                                                 className="bank-selected__logo"
-                                                src={`https://api.vietqr.io/img/${selectedAccount.bank_code}.png`}
-                                                alt={selectedAccount.bank_short_name}
+                                                src={`https://api.vietqr.io/img/${selectedBank.bank_code}.png`}
+                                                alt={selectedBank.bank_short_name}
                                                 onError={(e) => { e.target.style.display = 'none' }}
                                             />
                                             <div className="bank-selected__info">
-                                                <span className="bank-selected__name">{selectedAccount.bank_short_name} - {selectedAccount.account_number}</span>
-                                                <span className="bank-selected__holder">{selectedAccount.account_holder_name}</span>
+                                                <span className="bank-selected__name">{selectedBank.bank_short_name}</span>
+                                                <span className="bank-selected__holder">{selectedBank.bank_full_name}</span>
                                             </div>
                                             <span className="bank-selected__change">Thay đổi</span>
                                         </div>
@@ -335,51 +365,47 @@ export default function Home() {
                                                 ref={searchInputRef}
                                                 type="text"
                                                 className="bank-search-input"
-                                                placeholder="Tìm tài khoản ngân hàng..."
-                                                value={accountSearch}
+                                                placeholder="Tìm ngân hàng..."
+                                                value={bankSearch}
                                                 onChange={(e) => {
-                                                    setAccountSearch(e.target.value)
-                                                    setShowAccountDropdown(true)
+                                                    setBankSearch(e.target.value)
+                                                    setShowBankDropdown(true)
                                                 }}
-                                                onFocus={() => setShowAccountDropdown(true)}
+                                                onFocus={() => setShowBankDropdown(true)}
                                             />
                                         </>
                                     )}
 
-                                    {showAccountDropdown && !selectedAccount && (
+                                    {showBankDropdown && !selectedBank && (
                                         <div className="bank-dropdown">
-                                            {filteredAccounts.length > 0 ? (
-                                                filteredAccounts.map(acc => (
+                                            {filteredBanks.length > 0 ? (
+                                                filteredBanks.map(bank => (
                                                     <button
-                                                        key={acc.id}
+                                                        key={bank.bank_short_name}
                                                         type="button"
                                                         className="bank-option"
                                                         onClick={() => {
-                                                            setSelectedAccount(acc)
-                                                            setAccountSearch('')
-                                                            setShowAccountDropdown(false)
+                                                            setSelectedBank(bank)
+                                                            setBankSearch('')
+                                                            setShowBankDropdown(false)
                                                         }}
                                                     >
                                                         <img
                                                             className="bank-option__logo"
-                                                            src={`https://api.vietqr.io/img/${acc.bank_code}.png`}
-                                                            alt={acc.bank_short_name}
+                                                            src={`https://api.vietqr.io/img/${bank.bank_code}.png`}
+                                                            alt={bank.bank_short_name}
                                                             onError={(e) => { e.target.style.display = 'none' }}
                                                         />
                                                         <div className="bank-option__info">
                                                             <div className="bank-option__name">
-                                                                {acc.bank_short_name} - {acc.account_number}
-                                                                {acc.label && <span className="bank-option__label">{acc.label}</span>}
+                                                                {bank.bank_short_name}
                                                             </div>
-                                                            <div className="bank-option__full">{acc.account_holder_name}</div>
+                                                            <div className="bank-option__full">{bank.bank_full_name}</div>
                                                         </div>
-                                                        <span className={`bank-option__status ${acc.active === '1' ? 'active' : 'inactive'}`}>
-                                                            {acc.active === '1' ? 'Hoạt động' : 'Tạm khóa'}
-                                                        </span>
                                                     </button>
                                                 ))
                                             ) : (
-                                                <div className="no-results">Không tìm thấy tài khoản</div>
+                                                <div className="no-results">Không tìm thấy ngân hàng</div>
                                             )}
                                         </div>
                                     )}

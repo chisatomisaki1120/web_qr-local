@@ -6,15 +6,15 @@ This is a **Next.js Pages Router** application for generating VietQR payment cod
 
 ### Data Flow
 1. **Frontend** ([pages/index.js](../pages/index.js)) → Fetches bank accounts from `/api/bankaccounts`
-2. **Bank Selection** → User selects a bank (not specific account). Dropdown shows unique bank names only
-3. **QR Generation** → On submit, randomly selects an active account from the chosen bank, generates code with `SEVQR` prefix + 5 random chars, creates QR via `https://qr.sepay.vn/img`
+2. **Bank Selection** → User selects a bank (not specific account). Dropdown shows unique bank names only. Account is randomly selected and displayed immediately
+3. **QR Generation** → Uses the pre-selected account, generates code with `SEVQR` prefix + 5 random chars, creates QR via `https://qr.sepay.vn/img`
 4. **Polling** → Frontend polls `/api/check-transaction` every 3 seconds (30-min timeout)
 5. **Webhook** → SePay POSTs to `/api/webhook` when payment received; matches by transaction content containing the SEVQR code
 
 ### Bank Selection Logic
 - `uniqueBanks` - Extracts unique banks from all accounts by `bank_short_name`
 - `filteredBanks` - Filters banks by search query
-- `getRandomAccountForBank()` - Randomly selects an active account (`active === '1'`) from the chosen bank when generating QR
+- `getRandomAccountForBank()` - Randomly selects an active account (`active === '1'`) when bank is selected (displayed below dropdown)
 
 ### Key Files
 - [lib/transactions.js](../lib/transactions.js) - In-memory + JSON file persistence for transactions
@@ -58,7 +58,7 @@ return res.status(400).json({ success: false, error: 'Error message' })
 ## External Dependencies
 
 ### SePay API
-- **Bank accounts**: `GET https://my.sepay.vn/userapi/bankaccounts/list` with Bearer token
+- **Bank accounts**: `GET https://my.sepay.vn/userapi/bankaccounts/list` with Bearer token (cached 5 minutes server-side)
 - **QR generation**: `https://qr.sepay.vn/img?acc={account}&bank={bank}&amount={amount}&des={code}`
 - **Webhook auth**: SePay sends `Authorization: Apikey {SEPAY_API_KEY}` header
 

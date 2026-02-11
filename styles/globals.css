@@ -181,6 +181,10 @@ html, body {
     position: relative;
 }
 
+.bank-search-wrapper--with-account {
+    padding-bottom: 20px;
+}
+
 .bank-search-input {
     width: 100%;
     padding: 0.625rem 0.875rem;
@@ -193,6 +197,8 @@ html, body {
     transition: border-color 0.2s, box-shadow 0.2s;
     outline: none;
     font-family: inherit;
+    min-height: 48px;
+    box-sizing: border-box;
 }
 
 .bank-search-input:focus {
@@ -207,6 +213,10 @@ html, body {
     transform: translateY(-50%);
     color: #9ca3af;
     pointer-events: none;
+}
+
+.bank-search-wrapper--with-account .bank-search-icon {
+    top: calc(50% - 10px);
 }
 
 .bank-dropdown {
@@ -292,6 +302,8 @@ html, body {
     background: #fff7ed;
     cursor: pointer;
     transition: border-color 0.2s, background 0.2s;
+    min-height: 48px;
+    box-sizing: border-box;
 }
 
 .bank-selected:hover {
@@ -401,6 +413,22 @@ html, body {
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    position: relative;
+    min-height: 200px;
+}
+
+.qr-result__loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 14px;
+    z-index: 1;
 }
 
 .qr-result__image {
@@ -408,6 +436,11 @@ html, body {
     width: 100%;
     height: auto;
     border-radius: 8px;
+    transition: opacity 0.2s;
+}
+
+.qr-result__image--loading {
+    opacity: 0.3;
 }
 
 .qr-result__info {
@@ -604,6 +637,13 @@ html, body {
     font-size: 0.75rem;
     color: var(--text-secondary);
     margin-top: 1px;
+}
+
+/* ===== Account Info Card ===== */
+.form-input--readonly {
+    background: var(--input-bg);
+    cursor: default;
+    user-select: all;
 }
 
 /* ===== Bank Option Label & Status ===== */

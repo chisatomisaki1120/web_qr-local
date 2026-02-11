@@ -108,22 +108,30 @@ export default function Home() {
     }
 
     const generateQR = useCallback(() => {
-        if (!selectedBank) return
+        if (!selectedBank || !selectedAccount) return
 
-        // Randomly select account from the selected bank
-        const account = getRandomAccountForBank(selectedBank.bank_short_name)
-        if (!account) {
-            setApiError('Không tìm thấy tài khoản hoạt động cho ngân hàng này')
-            return
+        // Clear previous polling if exists
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current)
+            pollingRef.current = null
         }
-        setSelectedAccount(account)
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
+        }
+        if (countdownRef.current) {
+            clearInterval(countdownRef.current)
+            countdownRef.current = null
+        }
+        setPendingConfirm(false)
+        setCountdown(0)
 
         setLoading(true)
         const des = generateRandomCode()
         setQrDescription(des)
         const params = new URLSearchParams({
-            acc: account.account_number,
-            bank: account.bank_short_name,
+            acc: selectedAccount.account_number,
+            bank: selectedAccount.bank_short_name,
         })
         if (amount) params.set('amount', amount)
         params.set('des', des)
@@ -135,9 +143,9 @@ export default function Home() {
         setTimeout(() => {
             setLoading(false)
             // Start polling automatically after QR generation
-            startPolling(des, account)
+            startPolling(des, selectedAccount)
         }, 500)
-    }, [selectedBank, amount, bankAccounts])
+    }, [selectedBank, selectedAccount, amount])
 
     const handleSubmit = (e) => {
         e.preventDefault()
@@ -191,7 +199,7 @@ export default function Home() {
         }
     }
 
-    const canGenerate = !!selectedBank
+    const canGenerate = !!selectedBank && !!selectedAccount
 
     const startPolling = useCallback((code, account) => {
         setPendingConfirm(true)
@@ -331,15 +339,13 @@ export default function Home() {
                                     <span>{apiError}</span>
                                 </div>
                             ) : (
-                                <div ref={dropdownRef} className="bank-search-wrapper">
-                                    {selectedBank ? (
+                                <div ref={dropdownRef} className={`bank-search-wrapper${selectedAccount ? ' bank-search-wrapper--with-account' : ''}`}>
+                                    {selectedBank && !showBankDropdown ? (
                                         <div
                                             className="bank-selected"
                                             onClick={() => {
-                                                setSelectedBank(null)
-                                                setSelectedAccount(null)
-                                                setBankSearch('')
                                                 setShowBankDropdown(true)
+                                                setBankSearch('')
                                                 setTimeout(() => searchInputRef.current?.focus(), 50)
                                             }}
                                         >
@@ -376,7 +382,7 @@ export default function Home() {
                                         </>
                                     )}
 
-                                    {showBankDropdown && !selectedBank && (
+                                    {showBankDropdown && (
                                         <div className="bank-dropdown">
                                             {filteredBanks.length > 0 ? (
                                                 filteredBanks.map(bank => (
@@ -388,6 +394,9 @@ export default function Home() {
                                                             setSelectedBank(bank)
                                                             setBankSearch('')
                                                             setShowBankDropdown(false)
+                                                            // Immediately select a random account from this bank
+                                                            const account = getRandomAccountForBank(bank.bank_short_name)
+                                                            setSelectedAccount(account)
                                                         }}
                                                     >
                                                         <img
@@ -409,6 +418,31 @@ export default function Home() {
                                             )}
                                         </div>
                                     )}
+                                </div>
+                            )}
+
+                            {/* Selected Account Info */}
+                            {selectedAccount && (
+                                <>
+                                    <div className="form-group">
+                                        <label className="form-label">Số tài khoản</label>
+                                        <div className="form-input form-input--readonly">{selectedAccount.account_number}</div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Chủ tài khoản</label>
+                                        <div className="form-input form-input--readonly">{selectedAccount.account_holder_name}</div>
+                                    </div>
+                                </>
+                            )}
+
+                            {selectedBank && !selectedAccount && (
+                                <div className="api-error">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                                    </svg>
+                                    <span>Không tìm thấy tài khoản hoạt động cho ngân hàng này</span>
                                 </div>
                             )}
                         </div>
@@ -536,7 +570,7 @@ export default function Home() {
                 )}
 
                 {/* QR Result */}
-                {qrUrl && !loading && !confirmedTx && !txExpired && (
+                {qrUrl && !confirmedTx && !txExpired && (
                     <div className="qr-result">
                         <div className="card">
                             <div className="card__title">
@@ -548,8 +582,13 @@ export default function Home() {
                             </div>
                             <div className="qr-result__content">
                                 <div className="qr-result__image-wrapper">
+                                    {loading && (
+                                        <div className="qr-result__loading">
+                                            <span className="loading-spinner loading-spinner--dark" />
+                                        </div>
+                                    )}
                                     <img
-                                        className="qr-result__image"
+                                        className={`qr-result__image${loading ? ' qr-result__image--loading' : ''}`}
                                         src={qrUrl}
                                         alt="QR Code chuyển khoản"
                                     />

@@ -123,9 +123,6 @@ export default function Home() {
             clearInterval(countdownRef.current)
             countdownRef.current = null
         }
-        setPendingConfirm(false)
-        setCountdown(0)
-
         setLoading(true)
         const des = generateRandomCode()
         setQrDescription(des)

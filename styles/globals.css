@@ -847,6 +847,25 @@ html, body {
     font-size: 1rem !important;
 }
 
+.source-badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.source-badge--sepay {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.source-badge--casso {
+    background: #fce7f3;
+    color: #be185d;
+}
+
 .support-note {
     display: flex;
     align-items: center;

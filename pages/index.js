@@ -499,6 +499,14 @@ export default function Home() {
 
                                 <div className="confirm-success__details">
                                     <div className="qr-info-row">
+                                        <span className="qr-info-row__label">Nguồn xác nhận</span>
+                                        <span className="qr-info-row__value">
+                                            <span className={`source-badge source-badge--${confirmedTx.source || 'sepay'}`}>
+                                                {confirmedTx.source === 'casso' ? 'Casso' : 'SePay'}
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div className="qr-info-row">
                                         <span className="qr-info-row__label">Mã giao dịch</span>
                                         <span className="qr-info-row__value">#{confirmedTx.id}</span>
                                     </div>

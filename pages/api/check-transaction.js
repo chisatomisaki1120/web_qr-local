@@ -44,6 +44,7 @@ export default function handler(req, res) {
                 transferAmount: match.transferAmount,
                 accumulated: match.accumulated,
                 referenceCode: match.referenceCode,
+                source: match.source || 'sepay',
             },
         })
     }

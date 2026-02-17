@@ -3,6 +3,7 @@ const SEPAY_API_KEY = process.env.SEPAY_API_KEY
 // Shared transaction store (persisted to JSON file)
 const transactionStore = require('../../lib/transactions')
 const { logWebhook } = require('../../lib/webhook-logger')
+const { forwardWebhook } = require('../../lib/webhook-forwarder')
 
 export default function handler(req, res) {
     // GET: retrieve stored transactions
@@ -30,6 +31,9 @@ export default function handler(req, res) {
 
         // Log raw webhook payload for history tracking
         logWebhook('sepay', transaction)
+
+        // Forward webhook to external endpoint
+        forwardWebhook('sepay', transaction)
 
         // Validate required fields
         if (!transaction || !transaction.id) {

@@ -3,6 +3,7 @@ const CASSO_SECURE_TOKEN = process.env.CASSO_SECURE_TOKEN
 // Shared transaction store (persisted to JSON file)
 const transactionStore = require('../../lib/transactions')
 const { logWebhook } = require('../../lib/webhook-logger')
+const { forwardWebhook } = require('../../lib/webhook-forwarder')
 
 export default function handler(req, res) {
     // GET: retrieve stored transactions
@@ -32,6 +33,9 @@ export default function handler(req, res) {
 
         // Log raw webhook payload for history tracking
         logWebhook('casso', body)
+
+        // Forward webhook to external endpoint
+        forwardWebhook('casso', body)
 
         // Validate Casso payload structure
         if (!body || body.error !== 0 || !Array.isArray(body.data)) {
